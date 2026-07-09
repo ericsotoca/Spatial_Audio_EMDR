@@ -13,6 +13,7 @@ export class AudioEngine {
 
   // Active sources
   private activeSource: AudioBufferSourceNode | OscillatorNode | null = null;
+  private activeSoundGain: GainNode | null = null;
   private activeSoundType: SoundType | null = null;
   private currentVolume: number = 0.6;
   private currentPosition: SoundPosition = { x: 0, y: 0, z: 0 };
@@ -131,9 +132,14 @@ export class AudioEngine {
     const buffer = this.ctx.createBuffer(1, bufferSize, sampleRate);
     const data = buffer.getChannelData(0);
 
-    // 1. Generate pink noise baseline wash (distant rain sound)
+    // 1. Generate pink noise baseline wash with seamless crossfade (distant rain)
+    const crossfadeDuration = 0.2; // 200ms crossfade
+    const crossfadeSize = Math.floor(sampleRate * crossfadeDuration);
+    const tempSize = bufferSize + crossfadeSize;
+    const tempPink = new Float32Array(tempSize);
+
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    for (let i = 0; i < bufferSize; i++) {
+    for (let i = 0; i < tempSize; i++) {
       const white = Math.random() * 2 - 1;
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99332 * b1 + white * 0.0750759;
@@ -143,13 +149,26 @@ export class AudioEngine {
       b5 = -0.7616 * b5 - white * 0.0168980;
       const pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
       b6 = white * 0.115926;
-      data[i] = pink * 0.035; // Gentle atmospheric wash
+      tempPink[i] = pink * 0.035; // Gentle atmospheric wash
+    }
+
+    // Blend the extra tail part into the head using a power-complementary crossfade
+    for (let i = 0; i < bufferSize; i++) {
+      if (i < crossfadeSize) {
+        const alpha = i / crossfadeSize;
+        const gainIn = Math.sin(alpha * Math.PI / 2);
+        const gainOut = Math.cos(alpha * Math.PI / 2);
+        data[i] = tempPink[i] * gainIn + tempPink[bufferSize + i] * gainOut;
+      } else {
+        data[i] = tempPink[i];
+      }
     }
 
     // 2. Sprinkle random near-field high-fidelity drops (sharp transients)
+    // We wrap around using modulo to avoid truncating any drops near the loop boundary
     const numDrops = 150;
     for (let d = 0; d < numDrops; d++) {
-      const startIdx = Math.floor(Math.random() * (bufferSize - 2000));
+      const startIdx = Math.floor(Math.random() * bufferSize);
       const freq = 1200 + Math.random() * 1800; // High-pitched clean resonance
       const duration = 0.008 + Math.random() * 0.012; // Super quick plops (8-20ms)
       const samples = duration * sampleRate;
@@ -158,9 +177,8 @@ export class AudioEngine {
         const t = i / sampleRate;
         const amp = Math.exp(-t * 220); // Fast decay exponent
         const wave = Math.sin(2 * Math.PI * freq * t);
-        if (startIdx + i < bufferSize) {
-          data[startIdx + i] += wave * amp * 0.14;
-        }
+        const targetIdx = (startIdx + i) % bufferSize; // Perfect seamless wrap-around
+        data[targetIdx] += wave * amp * 0.14;
       }
     }
 
@@ -176,9 +194,17 @@ export class AudioEngine {
       await this.ctx.resume();
     }
 
-    // Stop current sound
+    // Stop current sound (initiates smooth fade-out of previous sound)
     this.stop();
     this.activeSoundType = type;
+
+    // Create a new session gain node for the new sound
+    const sessionGain = this.ctx.createGain();
+    sessionGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    // Smoothly fade in the new sound over 30ms to prevent any attack click
+    sessionGain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 0.03);
+    sessionGain.connect(this.panner);
+    this.activeSoundGain = sessionGain;
 
     if (type === 'organic_rain') {
       const buffer = this.buffers[type];
@@ -186,14 +212,14 @@ export class AudioEngine {
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
         source.loop = true;
-        source.connect(this.panner);
+        source.connect(sessionGain);
         source.start(0);
         this.activeSource = source;
       }
     } else if (type === 'forest_birds') {
       // Gentle wind chimes and warm bird sweeps
       const scheduler = () => {
-        if (!this.ctx || !this.panner) return;
+        if (!this.ctx || !this.panner || !sessionGain) return;
         const now = this.ctx.currentTime;
 
         // Randomly decide to play a chime (wind chime sound) or a chirp (bird)
@@ -212,7 +238,7 @@ export class AudioEngine {
           chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
 
           chimeOsc.connect(chimeGain);
-          chimeGain.connect(this.panner);
+          chimeGain.connect(sessionGain);
           chimeOsc.start(now);
           chimeOsc.stop(now + 1.3);
 
@@ -239,7 +265,7 @@ export class AudioEngine {
           chirpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
 
           chirpOsc.connect(chirpGain);
-          chirpGain.connect(this.panner);
+          chirpGain.connect(sessionGain);
           chirpOsc.start(now);
           chirpOsc.stop(now + 0.2);
 
@@ -262,7 +288,7 @@ export class AudioEngine {
       const gains = [0.35, 0.18, 0.08, 0.04];
       const bowlGain = this.ctx.createGain();
       bowlGain.gain.setValueAtTime(0.4, this.ctx.currentTime);
-      bowlGain.connect(this.panner);
+      bowlGain.connect(sessionGain);
 
       const oscs: OscillatorNode[] = [];
 
@@ -297,7 +323,7 @@ export class AudioEngine {
 
     } else if (type === 'heartbeat_sba') {
       const scheduler = () => {
-        if (!this.ctx || !this.panner) return;
+        if (!this.ctx || !this.panner || !sessionGain) return;
         const now = this.ctx.currentTime;
 
         const triggerBeat = (delay: number, intensity: number) => {
@@ -314,7 +340,7 @@ export class AudioEngine {
           gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
 
           osc.connect(gain);
-          gain.connect(this.panner!);
+          gain.connect(sessionGain);
           osc.start(time);
           osc.stop(time + 0.25);
 
@@ -353,7 +379,7 @@ export class AudioEngine {
       osc1.connect(padGain);
       osc2.connect(padGain);
       osc3.connect(padGain);
-      padGain.connect(this.panner);
+      padGain.connect(sessionGain);
 
       osc1.start();
       osc2.start();
@@ -363,7 +389,7 @@ export class AudioEngine {
       this.synthNodes.push({ oscs: [osc2, osc3], gain: padGain });
     } else if (type === 'handpan_sba') {
       const scheduler = () => {
-        if (!this.ctx || !this.panner) return;
+        if (!this.ctx || !this.panner || !sessionGain) return;
         const now = this.ctx.currentTime;
         const notes = [146.83, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00]; // D3, A3, C4, D4, E4, G4, A4
         const freq = notes[Math.floor(Math.random() * notes.length)];
@@ -388,7 +414,7 @@ export class AudioEngine {
         oscF.connect(groupGain);
         oscOct.connect(groupGain);
         oscFifth.connect(groupGain);
-        groupGain.connect(this.panner);
+        groupGain.connect(sessionGain);
 
         oscF.start(now);
         oscOct.start(now);
@@ -411,7 +437,7 @@ export class AudioEngine {
       this.arpeggioTimer = window.setInterval(scheduler, 900);
     } else if (type === 'hang_drum_sba') {
       const scheduler = () => {
-        if (!this.ctx || !this.panner) return;
+        if (!this.ctx || !this.panner || !sessionGain) return;
         const now = this.ctx.currentTime;
         const notes = [110.00, 164.81, 220.00, 246.94, 329.63, 392.00];
         const freq = notes[Math.floor(Math.random() * notes.length)];
@@ -431,7 +457,7 @@ export class AudioEngine {
 
         oscF.connect(groupGain);
         oscGu.connect(groupGain);
-        groupGain.connect(this.panner);
+        groupGain.connect(sessionGain);
 
         oscF.start(now);
         oscGu.start(now);
@@ -452,7 +478,7 @@ export class AudioEngine {
       this.arpeggioTimer = window.setInterval(scheduler, 1100);
     } else if (type === 'tongue_drum_sba') {
       const scheduler = () => {
-        if (!this.ctx || !this.panner) return;
+        if (!this.ctx || !this.panner || !sessionGain) return;
         const now = this.ctx.currentTime;
         const notes = [220.00, 246.94, 293.66, 329.63, 392.00, 440.00, 523.25];
         const freq = notes[Math.floor(Math.random() * notes.length)];
@@ -470,9 +496,16 @@ export class AudioEngine {
         groupGain.gain.linearRampToValueAtTime(0.20, now + 0.004);
         groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
 
+        // Warm analog-sounding lowpass filter for the tongue drum
+        const lpFilter = this.ctx.createBiquadFilter();
+        lpFilter.type = 'lowpass';
+        lpFilter.frequency.setValueAtTime(1100, now);
+        lpFilter.Q.setValueAtTime(1.0, now);
+
         oscF.connect(groupGain);
         oscDetune.connect(groupGain);
-        groupGain.connect(this.panner);
+        groupGain.connect(lpFilter);
+        lpFilter.connect(sessionGain);
 
         oscF.start(now);
         oscDetune.start(now);
@@ -493,7 +526,7 @@ export class AudioEngine {
       this.arpeggioTimer = window.setInterval(scheduler, 1300);
     } else if (type === 'bol_tibetan_premium') {
       const scheduler = () => {
-        if (!this.ctx || !this.panner) return;
+        if (!this.ctx || !this.panner || !sessionGain) return;
         const now = this.ctx.currentTime;
         const freqs = [144.0, 404.6, 809.2, 1224.0];
         const gains = [0.38, 0.16, 0.08, 0.04];
@@ -532,7 +565,7 @@ export class AudioEngine {
           oscs.push(lfo);
         });
 
-        groupGain.connect(this.panner);
+        groupGain.connect(sessionGain);
 
         const nodeRef = { oscs, gain: groupGain };
         this.synthNodes.push(nodeRef);
@@ -546,7 +579,7 @@ export class AudioEngine {
       this.arpeggioTimer = window.setInterval(scheduler, 2500);
     } else if (type === 'kalimba_sba') {
       const scheduler = () => {
-        if (!this.ctx || !this.panner) return;
+        if (!this.ctx || !this.panner || !sessionGain) return;
         const now = this.ctx.currentTime;
         const notes = [523.25, 587.33, 659.25, 783.99, 880.00, 987.77, 1046.50];
         const freq = notes[Math.floor(Math.random() * notes.length)];
@@ -558,12 +591,19 @@ export class AudioEngine {
         const oscThump = this.ctx.createOscillator();
         oscThump.type = 'triangle';
         oscThump.frequency.setValueAtTime(140, now);
+
+        // Lowpass filter on the kalimba thump to make it a deep, woody knock
+        const lpThumpFilter = this.ctx.createBiquadFilter();
+        lpThumpFilter.type = 'lowpass';
+        lpThumpFilter.frequency.setValueAtTime(250, now);
+
         const thumpGain = this.ctx.createGain();
         thumpGain.gain.setValueAtTime(0.15, now);
         thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
 
-        oscThump.connect(thumpGain);
-        thumpGain.connect(this.panner);
+        oscThump.connect(lpThumpFilter);
+        lpThumpFilter.connect(thumpGain);
+        thumpGain.connect(sessionGain);
 
         const groupGain = this.ctx.createGain();
         groupGain.gain.setValueAtTime(0, now);
@@ -571,7 +611,7 @@ export class AudioEngine {
         groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
 
         oscF.connect(groupGain);
-        groupGain.connect(this.panner);
+        groupGain.connect(sessionGain);
 
         oscF.start(now);
         oscThump.start(now);
@@ -637,32 +677,65 @@ export class AudioEngine {
   }
 
   public stop() {
-    // Clear arpeggiator timer
+    // Clear arpeggiator timer immediately
     if (this.arpeggioTimer) {
       clearInterval(this.arpeggioTimer);
       this.arpeggioTimer = null;
     }
 
-    // Stop active buffer/oscillator source
-    if (this.activeSource) {
+    const oldGain = this.activeSoundGain;
+    const oldSource = this.activeSource;
+    const oldSynthNodes = this.synthNodes;
+
+    if (oldGain && this.ctx) {
+      const now = this.ctx.currentTime;
       try {
-        this.activeSource.stop();
+        oldGain.gain.setValueAtTime(oldGain.gain.value, now);
+        oldGain.gain.linearRampToValueAtTime(0, now + 0.08); // Smooth 80ms fade out
       } catch (e) {
-        // Source might have been stopped already
+        try {
+          oldGain.gain.value = 0;
+        } catch (err) {}
       }
-      this.activeSource = null;
+
+      // Schedule cleanup after the fade-out completes
+      setTimeout(() => {
+        if (oldSource) {
+          try {
+            oldSource.stop();
+          } catch (e) {}
+        }
+        oldSynthNodes.forEach((node) => {
+          node.oscs.forEach((osc) => {
+            try {
+              osc.stop();
+            } catch (e) {}
+          });
+        });
+        try {
+          oldGain.disconnect();
+        } catch (e) {}
+      }, 100);
+    } else {
+      // Fallback synchronous cleanup
+      if (oldSource) {
+        try {
+          oldSource.stop();
+        } catch (e) {}
+      }
+      oldSynthNodes.forEach((node) => {
+        node.oscs.forEach((osc) => {
+          try {
+            osc.stop();
+          } catch (e) {}
+        });
+      });
     }
 
-    // Stop and clean up any ongoing scheduled synth voices
-    this.synthNodes.forEach((node) => {
-      node.oscs.forEach((osc) => {
-        try {
-          osc.stop();
-        } catch (e) {}
-      });
-    });
+    // Instantly reset class active state so next sound starts fresh
+    this.activeSource = null;
     this.synthNodes = [];
-
+    this.activeSoundGain = null;
     this.activeSoundType = null;
   }
 
