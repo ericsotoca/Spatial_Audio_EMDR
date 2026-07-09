@@ -60,7 +60,7 @@ export default function App() {
   // Sync isPlaying and sound selector
   useEffect(() => {
     if (isPlaying) {
-      audioEngine.start(activeSound);
+      audioEngine.start(activeSound, isAutopilot);
     } else {
       audioEngine.stop();
     }
@@ -68,7 +68,7 @@ export default function App() {
     return () => {
       audioEngine.stop();
     };
-  }, [isPlaying, activeSound, audioEngine]);
+  }, [isPlaying, activeSound, isAutopilot, audioEngine]);
 
   // Physical Keyboard Arrow Keys and Space bar bindings
   useEffect(() => {
@@ -126,7 +126,9 @@ export default function App() {
       // Increment rotation angle based on customizable orbit speed
       // Constant rate scaled by speed coefficient
       const delta = 0.015 * orbitSpeed;
+      const prevTheta = thetaRef.current;
       thetaRef.current += delta;
+      const currentTheta = thetaRef.current;
 
       setPosition((prev) => {
         let nextX = prev.x;
@@ -182,12 +184,41 @@ export default function App() {
             break;
         }
 
-        return {
+        const nextPos = {
           x: parseFloat(nextX.toFixed(3)),
           y: parseFloat(nextY.toFixed(3)),
           z: parseFloat(nextZ.toFixed(3)),
         };
+
+        // Instantly update audio engine position (avoiding any lag/batching delay)
+        audioEngine.updatePosition(nextPos);
+
+        return nextPos;
       });
+
+      // Peak / Extreme Trigger Detection for SBA Sounds
+      let triggerNote = false;
+
+      if (activeTrajectory === 'teleport_left_right' || activeTrajectory === 'teleport_up_down') {
+        const prevSin = Math.sin(prevTheta);
+        const currentSin = Math.sin(currentTheta);
+        // Crossing sin = 0 (when signs of sin differ)
+        if ((prevSin >= 0 && currentSin < 0) || (prevSin < 0 && currentSin >= 0)) {
+          triggerNote = true;
+        }
+      } else {
+        // circle, left_right, up_down, infinity:
+        // Extremes of panning are reached when cos(theta) changes sign
+        const prevCos = Math.cos(prevTheta);
+        const currentCos = Math.cos(currentTheta);
+        if ((prevCos >= 0 && currentCos < 0) || (prevCos < 0 && currentCos >= 0)) {
+          triggerNote = true;
+        }
+      }
+
+      if (triggerNote && isPlaying) {
+        audioEngine.triggerSbaNote();
+      }
 
       requestRef.current = requestAnimationFrame(animate);
     };
@@ -198,7 +229,7 @@ export default function App() {
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [isAutopilot, isPlaying, activeTrajectory, orbitSpeed]);
+  }, [isAutopilot, isPlaying, activeTrajectory, orbitSpeed, audioEngine]);
 
   return (
     <div className={`min-h-screen font-sans flex flex-col transition-colors duration-300 relative overflow-hidden ${
@@ -309,13 +340,13 @@ export default function App() {
       </main>
 
       {/* Professional Footer Bar */}
-      <footer className="border-t border-slate-300 dark:border-white/10 bg-slate-100/90 dark:bg-white/2 backdrop-blur-md py-6 mt-8 transition-colors duration-300 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-800 dark:text-slate-300 font-medium">
+      <footer className="border-t border-slate-300 dark:border-white/10 bg-slate-200/90 dark:bg-white/2 backdrop-blur-md py-6 mt-8 transition-colors duration-300 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-950 dark:text-slate-200 font-semibold">
           <p>
-            © {new Date().getFullYear()} <strong className="text-slate-950 dark:text-slate-50">Spatial Audio Compass</strong> — Interface utilisateur modernisée.
+            © {new Date().getFullYear()} <strong className="text-slate-950 dark:text-slate-50 font-bold">Spatial Audio Compass</strong> — Interface utilisateur modernisée.
           </p>
-          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase bg-slate-200/80 dark:bg-white/5 px-3 py-1.5 rounded-full border border-slate-300 dark:border-white/5 text-slate-800 dark:text-slate-200 font-bold">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase bg-slate-300/80 dark:bg-white/5 px-3 py-1.5 rounded-full border border-slate-400 dark:border-white/5 text-slate-950 dark:text-slate-100 font-bold">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
             <span>Sécurisé : traitement audio 100% local</span>
           </div>
         </div>

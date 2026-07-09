@@ -22,6 +22,11 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 380, height: 380 });
 
+  const positionRef = useRef(position);
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
   // Handle Resize of canvas container
   useEffect(() => {
     if (!containerRef.current) return;
@@ -48,6 +53,7 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
     let animationFrameId: number;
 
     const render = () => {
+      const pos = positionRef.current;
       // Clear with background color
       ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
@@ -233,9 +239,9 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
       const usableHalfW = dimensions.width / 2 - margin;
       const usableHalfH = dimensions.height / 2 - margin;
 
-      const sourceCanvasX = centerX + (position.x / 5) * usableHalfW;
+      const sourceCanvasX = centerX + (pos.x / 5) * usableHalfW;
       // Note: +Z is Front (top of canvas), so subtract position.z from centerY
-      const sourceCanvasY = centerY - (position.z / 5) * usableHalfH;
+      const sourceCanvasY = centerY - (pos.z / 5) * usableHalfH;
 
       // Draw distance vector line
       ctx.strokeStyle = isDarkMode ? 'rgba(56, 189, 248, 0.18)' : 'rgba(79, 70, 229, 0.15)';
@@ -247,8 +253,8 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
 
       // Draw elevation (Y) visualization bar under the source
       // If elevation is non-zero, draw a small vertical scale bar next to the source
-      const elevH = (position.y / 5) * 20;
-      ctx.strokeStyle = position.y >= 0 ? '#10b981' : '#ef4444';
+      const elevH = (pos.y / 5) * 20;
+      ctx.strokeStyle = pos.y >= 0 ? '#10b981' : '#ef4444';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(sourceCanvasX + 14, sourceCanvasY);
@@ -256,7 +262,7 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
       ctx.stroke();
 
       // Little dot at top of elevation bar
-      ctx.fillStyle = position.y >= 0 ? '#10b981' : '#ef4444';
+      ctx.fillStyle = pos.y >= 0 ? '#10b981' : '#ef4444';
       ctx.beginPath();
       ctx.arc(sourceCanvasX + 14, sourceCanvasY - elevH, 2, 0, Math.PI * 2);
       ctx.fill();
@@ -311,7 +317,7 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
       // Label beside sound source showing Elevation height indicator
       ctx.fillStyle = colors.text;
       ctx.font = '9px "JetBrains Mono", monospace';
-      ctx.fillText(`Y: ${position.y > 0 ? '+' : ''}${position.y.toFixed(1)}`, sourceCanvasX + 22, sourceCanvasY + 4);
+      ctx.fillText(`Y: ${pos.y > 0 ? '+' : ''}${pos.y.toFixed(1)}`, sourceCanvasX + 22, sourceCanvasY + 4);
 
       animationFrameId = requestAnimationFrame(render);
     };
@@ -321,7 +327,7 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [dimensions, position, isPlaying, isDarkMode, audioEngine]);
+  }, [dimensions, isPlaying, isDarkMode, audioEngine]);
 
   return (
     <div id="acoustic-scene-card" className="flex flex-col bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-3xl border border-slate-200/40 dark:border-white/10 p-5 shadow-xl transition-all duration-300">

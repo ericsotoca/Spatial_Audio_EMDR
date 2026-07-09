@@ -103,6 +103,11 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                 );
               })}
             </div>
+            {/* Highly readable, high-contrast trajectory explanation */}
+            <p className="mt-2 text-[11px] text-slate-700 dark:text-slate-300/90 leading-relaxed font-medium bg-slate-100/50 dark:bg-white/5 p-2 rounded-lg border border-slate-200/40 dark:border-white/5">
+              <span className="font-bold text-sky-600 dark:text-sky-400">Description : </span>
+              {trajectoryOptions.find((t) => t.id === activeTrajectory)?.description}
+            </p>
           </div>
 
           {/* Speed slider */}
@@ -168,7 +173,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                 id="volume-slider"
                 type="range"
                 min="0"
-                max="1"
+                max="2"
                 step="0.01"
                 value={volume}
                 onChange={(e) => onChangeVolume(parseFloat(e.target.value))}
@@ -295,22 +300,37 @@ export const SoundPickerCard: React.FC<SoundPickerCardProps> = ({
                 key={opt.id}
                 id={`sound-opt-${opt.id}`}
                 onClick={() => onChangeSound(opt.id)}
-                className={`w-full text-left py-3 px-4 rounded-2xl border transition-all duration-200 group flex items-center justify-between cursor-pointer ${
+                className={`w-full text-left py-3 px-4 rounded-2xl border transition-all duration-200 group flex items-start justify-between cursor-pointer ${
                   isSelected
                     ? 'bg-indigo-500/15 border-indigo-500/40 dark:bg-indigo-500/10 shadow-md'
                     : 'bg-white/60 hover:bg-slate-100/80 dark:bg-white/5 dark:hover:bg-white/10 border-slate-300 dark:border-white/10'
                 }`}
               >
-                <div className="flex-grow pr-4">
-                  <span className={`text-xs font-semibold tracking-wide ${
-                    isSelected ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-800 dark:text-slate-200'
+                <div className="flex-grow pr-4 flex flex-col gap-1">
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className={`text-xs font-semibold tracking-wide ${
+                      isSelected ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-800 dark:text-slate-200'
+                    }`}>
+                      {opt.name}
+                    </span>
+                    <span className={`text-[10px] font-mono font-medium ${
+                      isSelected ? 'text-indigo-500 dark:text-indigo-300/80' : 'text-slate-500 dark:text-slate-400'
+                    }`}>
+                      ({opt.englishName})
+                    </span>
+                  </div>
+                  {/* Detailed, high-contrast, perfectly legible sound description */}
+                  <p className={`text-[11px] leading-relaxed transition-colors ${
+                    isSelected 
+                      ? 'text-indigo-950 dark:text-slate-200 font-medium' 
+                      : 'text-slate-700 dark:text-slate-300'
                   }`}>
-                    {opt.name}
-                  </span>
+                    {opt.description}
+                  </p>
                 </div>
 
                 {/* Checklist Indicator */}
-                <div className="shrink-0">
+                <div className="shrink-0 mt-0.5">
                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
                     isSelected
                       ? 'border-indigo-500 bg-indigo-500 text-white'

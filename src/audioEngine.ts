@@ -185,7 +185,7 @@ export class AudioEngine {
     this.buffers['organic_rain'] = buffer;
   }
 
-  public async start(type: SoundType) {
+  public async start(type: SoundType, isAutopilot: boolean = false) {
     this.init();
     if (!this.ctx || !this.panner) return;
 
@@ -321,45 +321,6 @@ export class AudioEngine {
       this.activeSource = oscs[0];
       this.synthNodes.push({ oscs: oscs.slice(1), gain: bowlGain });
 
-    } else if (type === 'heartbeat_sba') {
-      const scheduler = () => {
-        if (!this.ctx || !this.panner || !sessionGain) return;
-        const now = this.ctx.currentTime;
-
-        const triggerBeat = (delay: number, intensity: number) => {
-          const time = now + delay;
-          const osc = this.ctx!.createOscillator();
-          const gain = this.ctx!.createGain();
-
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(90, time);
-          osc.frequency.exponentialRampToValueAtTime(25, time + 0.12);
-
-          gain.gain.setValueAtTime(0, time);
-          gain.gain.linearRampToValueAtTime(intensity, time + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
-
-          osc.connect(gain);
-          gain.connect(sessionGain);
-          osc.start(time);
-          osc.stop(time + 0.25);
-
-          const nodeRef = { oscs: [osc], gain };
-          this.synthNodes.push(nodeRef);
-          setTimeout(() => {
-            if (this.ctx) {
-              this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
-            }
-          }, 300);
-        };
-
-        triggerBeat(0, 0.45);
-        triggerBeat(0.16, 0.35);
-      };
-
-      scheduler();
-      this.arpeggioTimer = window.setInterval(scheduler, 1000);
-
     } else if (type === 'binaural_beat') {
       const osc1 = this.ctx.createOscillator();
       osc1.type = 'sine';
@@ -387,249 +348,27 @@ export class AudioEngine {
 
       this.activeSource = osc1;
       this.synthNodes.push({ oscs: [osc2, osc3], gain: padGain });
-    } else if (type === 'handpan_sba') {
-      const scheduler = () => {
-        if (!this.ctx || !this.panner || !sessionGain) return;
-        const now = this.ctx.currentTime;
-        const notes = [146.83, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00]; // D3, A3, C4, D4, E4, G4, A4
-        const freq = notes[Math.floor(Math.random() * notes.length)];
 
-        const oscF = this.ctx.createOscillator();
-        oscF.type = 'sine';
-        oscF.frequency.setValueAtTime(freq, now);
+    } else if (['heartbeat_sba', 'handpan_sba', 'hang_drum_sba', 'tongue_drum_sba', 'bol_tibetan_premium', 'kalimba_sba'].includes(type)) {
+      if (!isAutopilot) {
+        const intervals: Record<string, number> = {
+          heartbeat_sba: 1000,
+          handpan_sba: 900,
+          hang_drum_sba: 1100,
+          tongue_drum_sba: 1300,
+          bol_tibetan_premium: 2500,
+          kalimba_sba: 550
+        };
+        const interval = intervals[type] || 1000;
 
-        const oscOct = this.ctx.createOscillator();
-        oscOct.type = 'sine';
-        oscOct.frequency.setValueAtTime(freq * 2, now);
+        // Run first note immediately
+        this.triggerSbaNote();
 
-        const oscFifth = this.ctx.createOscillator();
-        oscFifth.type = 'sine';
-        oscFifth.frequency.setValueAtTime(freq * 3, now);
-
-        const groupGain = this.ctx.createGain();
-        groupGain.gain.setValueAtTime(0, now);
-        groupGain.gain.linearRampToValueAtTime(0.18, now + 0.005);
-        groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
-
-        oscF.connect(groupGain);
-        oscOct.connect(groupGain);
-        oscFifth.connect(groupGain);
-        groupGain.connect(sessionGain);
-
-        oscF.start(now);
-        oscOct.start(now);
-        oscFifth.start(now);
-
-        const stopTime = now + 2.0;
-        oscF.stop(stopTime);
-        oscOct.stop(stopTime);
-        oscFifth.stop(stopTime);
-
-        const nodeRef = { oscs: [oscF, oscOct, oscFifth], gain: groupGain };
-        this.synthNodes.push(nodeRef);
-        setTimeout(() => {
-          if (this.ctx) {
-            this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
-          }
-        }, 2200);
-      };
-      scheduler();
-      this.arpeggioTimer = window.setInterval(scheduler, 900);
-    } else if (type === 'hang_drum_sba') {
-      const scheduler = () => {
-        if (!this.ctx || !this.panner || !sessionGain) return;
-        const now = this.ctx.currentTime;
-        const notes = [110.00, 164.81, 220.00, 246.94, 329.63, 392.00];
-        const freq = notes[Math.floor(Math.random() * notes.length)];
-
-        const oscF = this.ctx.createOscillator();
-        oscF.type = 'sine';
-        oscF.frequency.setValueAtTime(freq, now);
-
-        const oscGu = this.ctx.createOscillator();
-        oscGu.type = 'sine';
-        oscGu.frequency.setValueAtTime(85, now);
-
-        const groupGain = this.ctx.createGain();
-        groupGain.gain.setValueAtTime(0, now);
-        groupGain.gain.linearRampToValueAtTime(0.22, now + 0.008);
-        groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
-
-        oscF.connect(groupGain);
-        oscGu.connect(groupGain);
-        groupGain.connect(sessionGain);
-
-        oscF.start(now);
-        oscGu.start(now);
-
-        const stopTime = now + 2.5;
-        oscF.stop(stopTime);
-        oscGu.stop(stopTime);
-
-        const nodeRef = { oscs: [oscF, oscGu], gain: groupGain };
-        this.synthNodes.push(nodeRef);
-        setTimeout(() => {
-          if (this.ctx) {
-            this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
-          }
-        }, 2700);
-      };
-      scheduler();
-      this.arpeggioTimer = window.setInterval(scheduler, 1100);
-    } else if (type === 'tongue_drum_sba') {
-      const scheduler = () => {
-        if (!this.ctx || !this.panner || !sessionGain) return;
-        const now = this.ctx.currentTime;
-        const notes = [220.00, 246.94, 293.66, 329.63, 392.00, 440.00, 523.25];
-        const freq = notes[Math.floor(Math.random() * notes.length)];
-
-        const oscF = this.ctx.createOscillator();
-        oscF.type = 'triangle';
-        oscF.frequency.setValueAtTime(freq, now);
-
-        const oscDetune = this.ctx.createOscillator();
-        oscDetune.type = 'sine';
-        oscDetune.frequency.setValueAtTime(freq * 1.004, now);
-
-        const groupGain = this.ctx.createGain();
-        groupGain.gain.setValueAtTime(0, now);
-        groupGain.gain.linearRampToValueAtTime(0.20, now + 0.004);
-        groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
-
-        // Warm analog-sounding lowpass filter for the tongue drum
-        const lpFilter = this.ctx.createBiquadFilter();
-        lpFilter.type = 'lowpass';
-        lpFilter.frequency.setValueAtTime(1100, now);
-        lpFilter.Q.setValueAtTime(1.0, now);
-
-        oscF.connect(groupGain);
-        oscDetune.connect(groupGain);
-        groupGain.connect(lpFilter);
-        lpFilter.connect(sessionGain);
-
-        oscF.start(now);
-        oscDetune.start(now);
-
-        const stopTime = now + 2.8;
-        oscF.stop(stopTime);
-        oscDetune.stop(stopTime);
-
-        const nodeRef = { oscs: [oscF, oscDetune], gain: groupGain };
-        this.synthNodes.push(nodeRef);
-        setTimeout(() => {
-          if (this.ctx) {
-            this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
-          }
-        }, 3000);
-      };
-      scheduler();
-      this.arpeggioTimer = window.setInterval(scheduler, 1300);
-    } else if (type === 'bol_tibetan_premium') {
-      const scheduler = () => {
-        if (!this.ctx || !this.panner || !sessionGain) return;
-        const now = this.ctx.currentTime;
-        const freqs = [144.0, 404.6, 809.2, 1224.0];
-        const gains = [0.38, 0.16, 0.08, 0.04];
-        
-        const groupGain = this.ctx.createGain();
-        groupGain.gain.setValueAtTime(0, now);
-        groupGain.gain.linearRampToValueAtTime(0.40, now + 0.02);
-        groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.8);
-
-        const oscs: OscillatorNode[] = [];
-
-        freqs.forEach((f, idx) => {
-          const osc = this.ctx!.createOscillator();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(f, now);
-
-          const lfo = this.ctx!.createOscillator();
-          lfo.frequency.setValueAtTime(0.18 + idx * 0.05, now);
-          const lfoGain = this.ctx!.createGain();
-          lfoGain.gain.setValueAtTime(1.5, now);
-
-          lfo.connect(lfoGain);
-          lfoGain.connect(osc.frequency);
-          lfo.start(now);
-          lfo.stop(now + 4.0);
-
-          const oscGain = this.ctx!.createGain();
-          oscGain.gain.setValueAtTime(gains[idx], now);
-
-          osc.connect(oscGain);
-          oscGain.connect(groupGain);
-          osc.start(now);
-          osc.stop(now + 4.0);
-
-          oscs.push(osc);
-          oscs.push(lfo);
-        });
-
-        groupGain.connect(sessionGain);
-
-        const nodeRef = { oscs, gain: groupGain };
-        this.synthNodes.push(nodeRef);
-        setTimeout(() => {
-          if (this.ctx) {
-            this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
-          }
-        }, 4200);
-      };
-      scheduler();
-      this.arpeggioTimer = window.setInterval(scheduler, 2500);
-    } else if (type === 'kalimba_sba') {
-      const scheduler = () => {
-        if (!this.ctx || !this.panner || !sessionGain) return;
-        const now = this.ctx.currentTime;
-        const notes = [523.25, 587.33, 659.25, 783.99, 880.00, 987.77, 1046.50];
-        const freq = notes[Math.floor(Math.random() * notes.length)];
-
-        const oscF = this.ctx.createOscillator();
-        oscF.type = 'sine';
-        oscF.frequency.setValueAtTime(freq, now);
-
-        const oscThump = this.ctx.createOscillator();
-        oscThump.type = 'triangle';
-        oscThump.frequency.setValueAtTime(140, now);
-
-        // Lowpass filter on the kalimba thump to make it a deep, woody knock
-        const lpThumpFilter = this.ctx.createBiquadFilter();
-        lpThumpFilter.type = 'lowpass';
-        lpThumpFilter.frequency.setValueAtTime(250, now);
-
-        const thumpGain = this.ctx.createGain();
-        thumpGain.gain.setValueAtTime(0.15, now);
-        thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-
-        oscThump.connect(lpThumpFilter);
-        lpThumpFilter.connect(thumpGain);
-        thumpGain.connect(sessionGain);
-
-        const groupGain = this.ctx.createGain();
-        groupGain.gain.setValueAtTime(0, now);
-        groupGain.gain.linearRampToValueAtTime(0.24, now + 0.002);
-        groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-
-        oscF.connect(groupGain);
-        groupGain.connect(sessionGain);
-
-        oscF.start(now);
-        oscThump.start(now);
-
-        const stopTime = now + 1.4;
-        oscF.stop(stopTime);
-        oscThump.stop(stopTime);
-
-        const nodeRef = { oscs: [oscF, oscThump], gain: groupGain };
-        this.synthNodes.push(nodeRef);
-        setTimeout(() => {
-          if (this.ctx) {
-            this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
-          }
-        }, 1600);
-      };
-      scheduler();
-      this.arpeggioTimer = window.setInterval(scheduler, 550);
+        // Start interval
+        this.arpeggioTimer = window.setInterval(() => {
+          this.triggerSbaNote();
+        }, interval);
+      }
     }
   }
 
@@ -869,5 +608,260 @@ export class AudioEngine {
 
   public getActiveSoundType(): SoundType | null {
     return this.activeSoundType;
+  }
+
+  public triggerSbaNote() {
+    if (!this.ctx || !this.activeSoundGain || !this.activeSoundType) return;
+    const now = this.ctx.currentTime;
+    const type = this.activeSoundType;
+    const sessionGain = this.activeSoundGain;
+
+    if (type === 'heartbeat_sba') {
+      const triggerBeat = (delay: number, intensity: number) => {
+        const time = now + delay;
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(90, time);
+        osc.frequency.exponentialRampToValueAtTime(25, time + 0.12);
+
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(intensity, time + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
+
+        osc.connect(gain);
+        gain.connect(sessionGain);
+        osc.start(time);
+        osc.stop(time + 0.25);
+
+        const nodeRef = { oscs: [osc], gain };
+        this.synthNodes.push(nodeRef);
+        setTimeout(() => {
+          if (this.ctx) {
+            this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
+          }
+        }, 300);
+      };
+
+      triggerBeat(0, 0.45);
+      triggerBeat(0.16, 0.35);
+
+    } else if (type === 'handpan_sba') {
+      const notes = [146.83, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00];
+      const freq = notes[Math.floor(Math.random() * notes.length)];
+
+      const oscF = this.ctx.createOscillator();
+      oscF.type = 'sine';
+      oscF.frequency.setValueAtTime(freq, now);
+
+      const oscOct = this.ctx.createOscillator();
+      oscOct.type = 'sine';
+      oscOct.frequency.setValueAtTime(freq * 2, now);
+
+      const oscFifth = this.ctx.createOscillator();
+      oscFifth.type = 'sine';
+      oscFifth.frequency.setValueAtTime(freq * 3, now);
+
+      const groupGain = this.ctx.createGain();
+      groupGain.gain.setValueAtTime(0, now);
+      groupGain.gain.linearRampToValueAtTime(0.18, now + 0.005);
+      groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+
+      oscF.connect(groupGain);
+      oscOct.connect(groupGain);
+      oscFifth.connect(groupGain);
+      groupGain.connect(sessionGain);
+
+      oscF.start(now);
+      oscOct.start(now);
+      oscFifth.start(now);
+
+      const stopTime = now + 2.0;
+      oscF.stop(stopTime);
+      oscOct.stop(stopTime);
+      oscFifth.stop(stopTime);
+
+      const nodeRef = { oscs: [oscF, oscOct, oscFifth], gain: groupGain };
+      this.synthNodes.push(nodeRef);
+      setTimeout(() => {
+        if (this.ctx) {
+          this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
+        }
+      }, 2200);
+
+    } else if (type === 'hang_drum_sba') {
+      const notes = [110.00, 164.81, 220.00, 246.94, 329.63, 392.00];
+      const freq = notes[Math.floor(Math.random() * notes.length)];
+
+      const oscF = this.ctx.createOscillator();
+      oscF.type = 'sine';
+      oscF.frequency.setValueAtTime(freq, now);
+
+      const oscGu = this.ctx.createOscillator();
+      oscGu.type = 'sine';
+      oscGu.frequency.setValueAtTime(85, now);
+
+      const groupGain = this.ctx.createGain();
+      groupGain.gain.setValueAtTime(0, now);
+      groupGain.gain.linearRampToValueAtTime(0.22, now + 0.008);
+      groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+
+      oscF.connect(groupGain);
+      oscGu.connect(groupGain);
+      groupGain.connect(sessionGain);
+
+      oscF.start(now);
+      oscGu.start(now);
+
+      const stopTime = now + 2.5;
+      oscF.stop(stopTime);
+      oscGu.stop(stopTime);
+
+      const nodeRef = { oscs: [oscF, oscGu], gain: groupGain };
+      this.synthNodes.push(nodeRef);
+      setTimeout(() => {
+        if (this.ctx) {
+          this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
+        }
+      }, 2700);
+
+    } else if (type === 'tongue_drum_sba') {
+      const notes = [220.00, 246.94, 293.66, 329.63, 392.00, 440.00, 523.25];
+      const freq = notes[Math.floor(Math.random() * notes.length)];
+
+      const oscF = this.ctx.createOscillator();
+      oscF.type = 'triangle';
+      oscF.frequency.setValueAtTime(freq, now);
+
+      const oscDetune = this.ctx.createOscillator();
+      oscDetune.type = 'sine';
+      oscDetune.frequency.setValueAtTime(freq * 1.004, now);
+
+      const groupGain = this.ctx.createGain();
+      groupGain.gain.setValueAtTime(0, now);
+      groupGain.gain.linearRampToValueAtTime(0.20, now + 0.004);
+      groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+
+      const lpFilter = this.ctx.createBiquadFilter();
+      lpFilter.type = 'lowpass';
+      lpFilter.frequency.setValueAtTime(1100, now);
+      lpFilter.Q.setValueAtTime(1.0, now);
+
+      oscF.connect(groupGain);
+      oscDetune.connect(groupGain);
+      groupGain.connect(lpFilter);
+      lpFilter.connect(sessionGain);
+
+      oscF.start(now);
+      oscDetune.start(now);
+
+      const stopTime = now + 2.8;
+      oscF.stop(stopTime);
+      oscDetune.stop(stopTime);
+
+      const nodeRef = { oscs: [oscF, oscDetune], gain: groupGain };
+      this.synthNodes.push(nodeRef);
+      setTimeout(() => {
+        if (this.ctx) {
+          this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
+        }
+      }, 3000);
+
+    } else if (type === 'bol_tibetan_premium') {
+      const freqs = [144.0, 404.6, 809.2, 1224.0];
+      const gains = [0.38, 0.16, 0.08, 0.04];
+      
+      const groupGain = this.ctx.createGain();
+      groupGain.gain.setValueAtTime(0, now);
+      groupGain.gain.linearRampToValueAtTime(0.40, now + 0.02);
+      groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.8);
+
+      const oscs: OscillatorNode[] = [];
+
+      freqs.forEach((f, idx) => {
+        const osc = this.ctx!.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now);
+
+        const lfo = this.ctx!.createOscillator();
+        lfo.frequency.setValueAtTime(0.18 + idx * 0.05, now);
+        const lfoGain = this.ctx!.createGain();
+        lfoGain.gain.setValueAtTime(1.5, now);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(now);
+        lfo.stop(now + 4.0);
+
+        const oscGain = this.ctx!.createGain();
+        oscGain.gain.setValueAtTime(gains[idx], now);
+
+        osc.connect(oscGain);
+        oscGain.connect(groupGain);
+        osc.start(now);
+        osc.stop(now + 4.0);
+
+        oscs.push(osc);
+        oscs.push(lfo);
+      });
+
+      groupGain.connect(sessionGain);
+
+      const nodeRef = { oscs, gain: groupGain };
+      this.synthNodes.push(nodeRef);
+      setTimeout(() => {
+        if (this.ctx) {
+          this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
+        }
+      }, 4200);
+
+    } else if (type === 'kalimba_sba') {
+      const notes = [523.25, 587.33, 659.25, 783.99, 880.00, 987.77, 1046.50];
+      const freq = notes[Math.floor(Math.random() * notes.length)];
+
+      const oscF = this.ctx.createOscillator();
+      oscF.type = 'sine';
+      oscF.frequency.setValueAtTime(freq, now);
+
+      const oscThump = this.ctx.createOscillator();
+      oscThump.type = 'triangle';
+      oscThump.frequency.setValueAtTime(140, now);
+
+      const lpThumpFilter = this.ctx.createBiquadFilter();
+      lpThumpFilter.type = 'lowpass';
+      lpThumpFilter.frequency.setValueAtTime(250, now);
+
+      const thumpGain = this.ctx.createGain();
+      thumpGain.gain.setValueAtTime(0.15, now);
+      thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+
+      oscThump.connect(lpThumpFilter);
+      lpThumpFilter.connect(thumpGain);
+      thumpGain.connect(sessionGain);
+
+      const groupGain = this.ctx.createGain();
+      groupGain.gain.setValueAtTime(0, now);
+      groupGain.gain.linearRampToValueAtTime(0.24, now + 0.002);
+      groupGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+      oscF.connect(groupGain);
+      groupGain.connect(sessionGain);
+
+      oscF.start(now);
+      oscThump.start(now);
+
+      const stopTime = now + 1.4;
+      oscF.stop(stopTime);
+      oscThump.stop(stopTime);
+
+      const nodeRef = { oscs: [oscF, oscThump], gain: groupGain };
+      this.synthNodes.push(nodeRef);
+      setTimeout(() => {
+        if (this.ctx) {
+          this.synthNodes = this.synthNodes.filter((n) => n !== nodeRef);
+        }
+      }, 1600);
+    }
   }
 }
