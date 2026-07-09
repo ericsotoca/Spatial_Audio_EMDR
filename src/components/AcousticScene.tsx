@@ -56,7 +56,7 @@ export const AcousticScene: React.FC<AcousticSceneProps> = ({
         gridLines: isDarkMode ? 'rgba(125, 211, 252, 0.12)' : 'rgba(79, 70, 229, 0.08)',
         gridSubLines: isDarkMode ? 'rgba(125, 211, 252, 0.04)' : 'rgba(79, 70, 229, 0.03)',
         axes: isDarkMode ? 'rgba(255, 255, 255, 0.18)' : 'rgba(100, 116, 139, 0.15)',
-        text: isDarkMode ? '#94a3b8' : '#64748b',
+        text: isDarkMode ? '#94a3b8' : '#1e293b',
         head: isDarkMode ? '#1e293b' : '#cbd5e1',
         headOutline: isDarkMode ? '#475569' : '#94a3b8',
         headphones: isDarkMode ? '#38bdf8' : '#4f46e5',
