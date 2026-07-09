@@ -1,0 +1,8 @@
+{
+  "name": "Spatial Audio Compass",
+  "description": "Un simulateur audio spatial 3D interactif avec panoramique HRTF Web Audio, signaux sonores personnalisés, orbite automatique et une interface utilisateur moderne avec modes clair et sombre.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
