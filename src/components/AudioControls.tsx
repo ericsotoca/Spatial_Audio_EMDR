@@ -81,7 +81,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
           
           {/* Trajectory option pills */}
           <div className="mb-4">
-            <span className="block text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold mb-2">
+            <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold mb-2">
               Trajectoire 3D
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 p-1 bg-slate-200/40 dark:bg-black/35 rounded-xl border border-slate-200/50 dark:border-white/5">
@@ -95,7 +95,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
                     className={`py-2 px-2 rounded-lg text-xs font-semibold text-center transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-sky-500 text-white shadow-sm font-bold'
-                        : 'text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/20 dark:hover:bg-white/5'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-200/20 dark:hover:bg-white/5'
                     }`}
                   >
                     {traj.name}
@@ -107,9 +107,9 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
 
           {/* Speed slider */}
           <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+            <div className="flex justify-between items-center text-[10px] text-slate-600 dark:text-slate-400 font-bold font-mono">
               <span>VITESSE D'ORBITE</span>
-              <span className="font-semibold text-sky-500 dark:text-sky-400">{orbitSpeed.toFixed(1)}x</span>
+              <span className="font-bold text-sky-600 dark:text-sky-400">{orbitSpeed.toFixed(1)}x</span>
             </div>
             <input
               id="orbit-speed-slider"
@@ -128,7 +128,7 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
 
       {/* Playback Controller Card */}
       <div id="playback-card" className="bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-3xl border border-slate-200/40 dark:border-white/10 p-5 shadow-xl transition-all duration-300">
-        <h3 className="font-display font-semibold text-xs text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+        <h3 className="font-display font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3">
           Contrôleur de Lecture
         </h3>
         
@@ -158,11 +158,11 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
 
           {/* Master Volume Controls */}
           <div className="w-full sm:w-64 flex items-center gap-3.5 bg-slate-200/40 dark:bg-black/35 px-4 py-2.5 rounded-2xl border border-slate-200/50 dark:border-white/5">
-            <Volume2 className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+            <Volume2 className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
             <div className="flex-grow flex flex-col gap-1">
-              <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+              <div className="flex justify-between items-center text-[10px] text-slate-600 dark:text-slate-400 font-bold font-mono">
                 <span>VOL</span>
-                <span className="font-semibold">{Math.round(volume * 100)}%</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.round(volume * 100)}%</span>
               </div>
               <input
                 id="volume-slider"
@@ -281,7 +281,7 @@ export const SoundPickerCard: React.FC<SoundPickerCardProps> = ({
             Choix du Signal Sonore
           </h3>
         </div>
-        <div className="text-slate-400 dark:text-slate-500">
+        <div className="text-slate-500 dark:text-slate-400">
           {isSoundPickerExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </button>
@@ -298,12 +298,12 @@ export const SoundPickerCard: React.FC<SoundPickerCardProps> = ({
                 className={`w-full text-left py-3 px-4 rounded-2xl border transition-all duration-200 group flex items-center justify-between cursor-pointer ${
                   isSelected
                     ? 'bg-indigo-500/15 border-indigo-500/40 dark:bg-indigo-500/10 shadow-md'
-                    : 'bg-white/60 hover:bg-slate-100/80 dark:bg-white/5 dark:hover:bg-white/10 border-slate-200/60 dark:border-white/5'
+                    : 'bg-white/60 hover:bg-slate-100/80 dark:bg-white/5 dark:hover:bg-white/10 border-slate-300 dark:border-white/10'
                 }`}
               >
                 <div className="flex-grow pr-4">
                   <span className={`text-xs font-semibold tracking-wide ${
-                    isSelected ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-700 dark:text-slate-200'
+                    isSelected ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-800 dark:text-slate-200'
                   }`}>
                     {opt.name}
                   </span>

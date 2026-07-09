@@ -225,7 +225,7 @@ export default function App() {
               <h1 className="font-display font-bold text-base sm:text-lg tracking-tight bg-gradient-to-r from-slate-950 via-sky-600 to-indigo-600 dark:from-white dark:via-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">
                 Spatial Audio EMDR
               </h1>
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide">
+              <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 font-semibold tracking-wide">
                 Simulateur de Stimulation Bilatérale Alternée (SBA) 3D
               </p>
             </div>
@@ -310,11 +310,11 @@ export default function App() {
 
       {/* Professional Footer Bar */}
       <footer className="border-t border-slate-200/40 dark:border-white/10 bg-white/20 dark:bg-white/2 backdrop-blur-md py-6 mt-8 transition-colors duration-300 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600 dark:text-slate-400">
           <p>
             © {new Date().getFullYear()} <strong>Spatial Audio Compass</strong> — Interface utilisateur modernisée.
           </p>
-          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase bg-slate-200/30 dark:bg-white/5 px-3 py-1 rounded-full border border-slate-300/20 dark:border-white/5">
+          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase bg-slate-200/30 dark:bg-white/5 px-3 py-1 rounded-full border border-slate-300/20 dark:border-white/5 text-slate-600 dark:text-slate-300">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
             <span>Sécurisé : traitement audio 100% local</span>
           </div>
@@ -349,7 +349,7 @@ export default function App() {
 
               <div>
                 <span className="font-semibold text-slate-800 dark:text-slate-200 block mb-1">🕹️ Guidage de la source sonore :</span>
-                <ul className="list-disc list-inside space-y-1 pl-1 text-xs text-slate-500 dark:text-slate-400">
+                <ul className="list-disc list-inside space-y-1 pl-1 text-xs text-slate-600 dark:text-slate-300">
                   <li><strong>Glisser-Déposer :</strong> Cliquez ou glissez sur le radar 2D pour orienter manuellement la position du son en temps réel.</li>
                   <li><strong>Clavier Physique :</strong> Utilisez les <strong className="text-sky-600 dark:text-sky-400">flèches directionnelles (↑, ↓, ←, →)</strong> pour déplacer la source par paliers de 0,5 mètre.</li>
                 </ul>
@@ -357,7 +357,7 @@ export default function App() {
 
               <div>
                 <span className="font-semibold text-slate-800 dark:text-slate-200 block mb-1">🔄 Paramètres Thérapeutiques recommandés :</span>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
                   Sélectionnez l'<strong>Averse Apaisante</strong> ou les <strong>Clics EMDR</strong> avec la trajectoire <strong>Gauche-Droite</strong> (activée par défaut) pour une stimulation bilatérale alternée optimale. Ajustez la vitesse d'orbite en fonction du rythme requis pour la désensibilisation.
                 </p>
               </div>
